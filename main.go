@@ -13,10 +13,20 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
+// Set default note
+const (
+	defaultNote = "Welcome!\nTap '+' in the toolbar to add a note.\nOr use the keyboard shortcut ctrl+N."
+)
+
 var (
+	// Set colors
 	fontColor     = color.NRGBA{R: 70, G: 58, B: 17, A: 255}
 	leftSideColor = color.NRGBA{R: 242, G: 235, B: 155, A: 255}
 	notesColor    = color.NRGBA{R: 216, G: 210, B: 140, A: 255}
+
+	// Set temporary DB for notes
+	notesDB     = make(map[string]string)
+	currentNote string
 )
 
 // Custom theme
@@ -72,16 +82,13 @@ func main() {
 	generalBackgroundRect := canvas.NewRectangle(color.Black)
 	generalBackgroundRect.Resize(window.Canvas().Size())
 
+	// Right side of split container
+	entry := widget.NewMultiLineEntry()
+	rightSideWithBackground := container.NewStack(canvas.NewRectangle(notesColor), entry)
+
 	// dynamic container for notes names
 	notesNameContainer := container.NewVBox()
-	noteNameButton := &widget.Button{
-		Text:      "Note 1",
-		Alignment: widget.ButtonAlignLeading,
-		OnTapped: func() {
-			// TODO: open the note
-		},
-	}
-	notesNameContainer.Add(noteNameButton)
+	entry.SetText(defaultNote)
 
 	// wrap notesNameContainer in a scroll container
 	scrollNotesNameContainer := container.NewVScroll(notesNameContainer)
@@ -90,20 +97,64 @@ func main() {
 	// Left side of split container
 	leftSide := container.NewVBox(
 		container.NewHBox(widget.NewButtonWithIcon("", theme.ContentAddIcon(), func() {
+			// Save the previous note text
+			notesDB[currentNote] = entry.Text
+			fmt.Println(entry.Text, "saved")
+			// Clear the entry
+			entry.SetText("")
 			// Add new note
+			noteName := fmt.Sprintf("Note %d", len(notesNameContainer.Objects)+1)
 			noteNameButton := &widget.Button{
-				Text:      fmt.Sprintf("Note %d", len(notesNameContainer.Objects)+1),
+				Text:      noteName,
 				Alignment: widget.ButtonAlignLeading,
 				OnTapped: func() {
-					// TODO: open the note
+					// Save the previous note text
+					notesDB[currentNote] = entry.Text
+					fmt.Println(entry.Text, "saved")
+					// Open the note
+					entry.SetText(notesDB[noteName])
+					// Change current note state
+					currentNote = noteName
 				},
 			}
 			notesNameContainer.Add(noteNameButton)
+			// Change current note state
+			currentNote = noteName
 			fmt.Println("Add Note")
+
 		}), widget.NewButtonWithIcon("", theme.ContentRemoveIcon(), func() {
-			// Remove the last note
+			// Remove the current note
 			if len(notesNameContainer.Objects) > 0 {
-				notesNameContainer.Remove(notesNameContainer.Objects[len(notesNameContainer.Objects)-1])
+				// Find the index of the current note
+				indexToRemove := 0
+				for i, obj := range notesNameContainer.Objects {
+					button, ok := obj.(*widget.Button)
+					if ok && button.Text == currentNote {
+						indexToRemove = i
+						break
+					}
+				}
+				fmt.Println(indexToRemove, "removed index")
+				// Clear the entry if there are no notes
+				if len(notesNameContainer.Objects) == 1 {
+					entry.SetText(defaultNote)
+				} else if len(notesNameContainer.Objects) > 1 {
+					// Change current note
+					if len(notesNameContainer.Objects) > indexToRemove+1 { // Check if there is a next note
+						fmt.Println("Change to next note")
+						currentNote = notesNameContainer.Objects[indexToRemove+1].(*widget.Button).Text
+						entry.SetText(notesDB[currentNote])
+					} else {
+						fmt.Println("Change to previous note")
+						currentNote = notesNameContainer.Objects[indexToRemove-1].(*widget.Button).Text
+						entry.SetText(notesDB[currentNote])
+					}
+				}
+				// Remove by index
+				notesNameContainer.Objects = append(notesNameContainer.Objects[:indexToRemove],
+					notesNameContainer.Objects[indexToRemove+1:]...)
+				// Remove the note from the DB
+				delete(notesDB, currentNote)
 				fmt.Println("Remove Note")
 			}
 		})),
@@ -111,10 +162,6 @@ func main() {
 	)
 	leftSideRect := canvas.NewRectangle(leftSideColor)
 	leftSideWithBackground := container.NewStack(leftSideRect, leftSide)
-
-	// Right side of split container
-	entry := widget.NewMultiLineEntry()
-	rightSideWithBackground := container.NewStack(canvas.NewRectangle(notesColor), entry)
 
 	// Split container
 	split := container.NewHSplit(
