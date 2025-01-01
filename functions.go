@@ -15,6 +15,9 @@ func addNote(entry *widget.Entry, notesNameContainer *fyne.Container) {
 	var previousButtonText string
 	if currentHighlightedNoteName != nil {
 		previousButtonText = currentHighlightedNoteName.Objects[1].(*widget.Button).Text
+		if previousButtonText == "" {
+			previousButtonText = "Untitled"
+		}
 	}
 	// Save the previous note text
 	notesDB[previousButtonText] = entry.Text
@@ -34,6 +37,9 @@ func addNote(entry *widget.Entry, notesNameContainer *fyne.Container) {
 		var previousButtonText string
 		if currentHighlightedNoteName != nil {
 			previousButtonText = currentHighlightedNoteName.Objects[1].(*widget.Button).Text
+			if previousButtonText == "" {
+				previousButtonText = "Untitled"
+			}
 		}
 		// Save the previous note text
 		notesDB[previousButtonText] = entry.Text
