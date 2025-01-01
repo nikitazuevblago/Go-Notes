@@ -25,9 +25,9 @@ var (
 	notesColor    = color.NRGBA{R: 216, G: 210, B: 140, A: 255}
 
 	// Set temporary DB for notes
-	notesDB                     = make(map[string]string)
-	currentNoteName             string
-	previousHighlightedNoteName *fyne.Container
+	notesDB                    = make(map[string]string)
+	currentNoteName            string
+	currentHighlightedNoteName *fyne.Container
 )
 
 // Main
