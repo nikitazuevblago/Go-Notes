@@ -26,7 +26,7 @@ var (
 
 	// Set temporary DB for notes
 	notesDB                     = make(map[string]string)
-	currentNote                 string
+	currentNoteName             string
 	previousHighlightedNoteName *fyne.Container
 )
 

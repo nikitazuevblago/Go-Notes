@@ -18,12 +18,11 @@ func addNote(entry *widget.Entry, notesNameContainer *fyne.Container) {
 		previousButtonText = previousHighlightedNoteName.Objects[1].(*widget.Button).Text
 	}
 	// Save the previous note text
-	notesDB[currentNote] = entry.Text
-	fmt.Println(currentNote, "saved")
+	notesDB[currentNoteName] = entry.Text
+	fmt.Println(currentNoteName, "saved")
 	// Clear the entry
 	entry.SetText("")
 	if previousHighlightedNoteName != nil {
-		fmt.Println(previousButtonText, "PREVIOUS BUTTON TEXT")
 		previousHighlightedNoteName.Objects[1].(*widget.Button).SetText(previousButtonText)
 		previousHighlightedNoteName.Objects[0].(*canvas.Rectangle).FillColor = color.Transparent
 	}
@@ -32,28 +31,38 @@ func addNote(entry *widget.Entry, notesNameContainer *fyne.Container) {
 	noteNameButton := &widget.Button{
 		Text:      noteName,
 		Alignment: widget.ButtonAlignLeading,
-		OnTapped: func() {
-			if noteName != currentNote {
-				// Save the previous note text
-				notesDB[currentNote] = entry.Text
-				fmt.Println(currentNote, "saved")
-				// Open the note
-				entry.SetText(notesDB[noteName])
-				// Change current note state
-				currentNote = noteName
-				// Iterate over the notes name container and highlight the current note
-				for _, obj := range notesNameContainer.Objects {
-					localContainer, ok := obj.(*fyne.Container)
-					if ok && localContainer.Objects[1].(*widget.Button).Text == currentNote {
-						// Highlight the note name background with white color
-						localContainer.Objects[0].(*canvas.Rectangle).FillColor = color.White
-					} else {
-						// Remove the highlight from the previous note name
-						localContainer.Objects[0].(*canvas.Rectangle).FillColor = color.Transparent
-					}
+	}
+	noteNameButton.OnTapped = func() {
+		if noteName != currentNoteName {
+			var previousButtonText string
+			if previousHighlightedNoteName != nil {
+				previousButtonText = previousHighlightedNoteName.Objects[1].(*widget.Button).Text
+			}
+			// Save the previous note text
+			notesDB[currentNoteName] = entry.Text
+
+			fmt.Println(currentNoteName, "saved")
+			// Open the note
+			entry.SetText(notesDB[noteName])
+			// Update the previous button's appearance
+			if previousHighlightedNoteName != nil {
+				previousHighlightedNoteName.Objects[1].(*widget.Button).SetText(previousButtonText)
+				previousHighlightedNoteName.Objects[0].(*canvas.Rectangle).FillColor = color.Transparent
+				previousHighlightedNoteName.Refresh()
+			}
+			// Change current note state
+			currentNoteName = noteName
+			// Highlight the note name background with white color
+			for _, obj := range notesNameContainer.Objects {
+				button := obj.(*fyne.Container).Objects[1].(*widget.Button)
+				if button == noteNameButton {
+					obj.(*fyne.Container).Objects[0].(*canvas.Rectangle).FillColor = color.White
+					previousHighlightedNoteName = obj.(*fyne.Container)
+				} else {
+					obj.(*fyne.Container).Objects[0].(*canvas.Rectangle).FillColor = color.Transparent
 				}
 			}
-		},
+		}
 	}
 	// Dynamically change the note name based on first line of the note text
 	entry.OnChanged = func(s string) {
@@ -70,35 +79,24 @@ func addNote(entry *widget.Entry, notesNameContainer *fyne.Container) {
 	// Highlight newly created note name
 	bg := canvas.NewRectangle(color.White)
 	highLightedNoteName := container.NewStack(bg, noteNameButton)
-	// // Iterate over the notes name container and remove the highlight from the previous note name
-	// for _, obj := range notesNameContainer.Objects {
-	// 	localContainer, ok := obj.(*fyne.Container)
-	// 	if ok && localContainer.Objects[1].(*widget.Button).Text == currentNote {
-	// 		// Remove the highlight from the previous note name
-	// 		localContainer.Objects[0].(*canvas.Rectangle).FillColor = color.Transparent
-	// 	}
-	// }
 	// Add the note name to the container
 	notesNameContainer.Add(highLightedNoteName)
 	// Change current note state
-	currentNote = noteName
+	currentNoteName = noteNameButton.Text
 	previousHighlightedNoteName = highLightedNoteName
 	fmt.Println("Add Note")
 }
 
 func removeNote(entry *widget.Entry, notesNameContainer *fyne.Container) {
+	currentNoteName = previousHighlightedNoteName.Objects[1].(*widget.Button).Text
 	// Remove the current note
 	if len(notesNameContainer.Objects) > 0 {
-		// Find the index of the current note
+		// Find the index of the current note by previousHighlightedNoteName
 		indexToRemove := 0
 		for i, obj := range notesNameContainer.Objects {
-			localContainer, ok := obj.(*fyne.Container)
-			if ok {
-				button, ok := localContainer.Objects[1].(*widget.Button)
-				if ok && button.Text == currentNote {
-					indexToRemove = i
-					break
-				}
+			if obj == previousHighlightedNoteName {
+				indexToRemove = i
+				break
 			}
 		}
 		fmt.Println(indexToRemove, "removed index")
@@ -109,28 +107,30 @@ func removeNote(entry *widget.Entry, notesNameContainer *fyne.Container) {
 			// Change current note
 			if len(notesNameContainer.Objects) > indexToRemove+1 { // Check if there is a next note
 				fmt.Println("Change to next note")
-				currentNote = notesNameContainer.Objects[indexToRemove+1].(*fyne.Container).Objects[1].(*widget.Button).Text
-				entry.SetText(notesDB[currentNote])
+				currentNoteName = notesNameContainer.Objects[indexToRemove+1].(*fyne.Container).Objects[1].(*widget.Button).Text
+				entry.SetText(notesDB[currentNoteName])
 				// Highlight the note name background with white color
 				bg := canvas.NewRectangle(color.White)
 				highLightedNoteName := container.NewStack(bg, notesNameContainer.Objects[indexToRemove+1].(*fyne.Container).Objects[1].(*widget.Button))
 				notesNameContainer.Objects[indexToRemove+1] = highLightedNoteName
+				previousHighlightedNoteName = highLightedNoteName
 
 			} else {
 				fmt.Println("Change to previous note")
-				currentNote = notesNameContainer.Objects[indexToRemove-1].(*fyne.Container).Objects[1].(*widget.Button).Text
-				entry.SetText(notesDB[currentNote])
+				currentNoteName = notesNameContainer.Objects[indexToRemove-1].(*fyne.Container).Objects[1].(*widget.Button).Text
+				entry.SetText(notesDB[currentNoteName])
 				// Highlight the note name background with white color
 				bg := canvas.NewRectangle(color.White)
 				highLightedNoteName := container.NewStack(bg, notesNameContainer.Objects[indexToRemove-1].(*fyne.Container).Objects[1].(*widget.Button))
 				notesNameContainer.Objects[indexToRemove-1] = highLightedNoteName
+				previousHighlightedNoteName = highLightedNoteName
 			}
 		}
 		// Remove by index
 		notesNameContainer.Objects = append(notesNameContainer.Objects[:indexToRemove],
 			notesNameContainer.Objects[indexToRemove+1:]...)
 		// Remove the note from the DB
-		delete(notesDB, currentNote)
+		delete(notesDB, currentNoteName)
 		fmt.Println("Remove Note")
 	}
 }
