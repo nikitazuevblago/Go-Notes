@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"image/color"
+	"strings"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
@@ -12,11 +13,19 @@ import (
 
 // Sub functions
 func addNote(entry *widget.Entry, notesNameContainer *fyne.Container) {
+	var previousButtonText string
+	if previousButton != nil {
+		previousButtonText = previousButton.Text
+	}
 	// Save the previous note text
 	notesDB[currentNote] = entry.Text
 	fmt.Println(currentNote, "saved")
 	// Clear the entry
 	entry.SetText("")
+	if previousButton != nil {
+		fmt.Println(previousButtonText, "PREVIOUS BUTTON TEXT")
+		previousButton.SetText(previousButtonText)
+	}
 	// Add new note
 	noteName := fmt.Sprintf("Note %d", len(notesNameContainer.Objects)+1)
 	noteNameButton := &widget.Button{
@@ -45,6 +54,18 @@ func addNote(entry *widget.Entry, notesNameContainer *fyne.Container) {
 			}
 		},
 	}
+	// Dynamically change the note name based on first line of the note text
+	entry.OnChanged = func(s string) {
+		var firstLine string
+		// Get the first line of the note text
+		if len(s) > 15 {
+			firstLine = strings.Split(s, "\n")[0][:15] + "..."
+		} else {
+			firstLine = strings.Split(s, "\n")[0]
+		}
+		// Change the note name
+		noteNameButton.SetText(firstLine)
+	}
 	// Highlight newly created note name
 	bg := canvas.NewRectangle(color.White)
 	highLightedNoteName := container.NewStack(bg, noteNameButton)
@@ -60,6 +81,7 @@ func addNote(entry *widget.Entry, notesNameContainer *fyne.Container) {
 	notesNameContainer.Add(highLightedNoteName)
 	// Change current note state
 	currentNote = noteName
+	previousButton = noteNameButton
 	fmt.Println("Add Note")
 }
 
