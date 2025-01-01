@@ -9,6 +9,7 @@ import (
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 )
@@ -87,7 +88,8 @@ func main() {
 	rightSideWithBackground := container.NewStack(canvas.NewRectangle(notesColor), entry)
 
 	// dynamic container for notes names
-	notesNameContainer := container.NewVBox()
+	zeroPaddingLayout := layout.NewCustomPaddedVBoxLayout(0) // Make zero padding between note names
+	notesNameContainer := container.New(zeroPaddingLayout)
 	entry.SetText(defaultNote)
 
 	// wrap notesNameContainer in a scroll container
@@ -115,15 +117,29 @@ func main() {
 					entry.SetText(notesDB[noteName])
 					// Change current note state
 					currentNote = noteName
+					// TODO: Highlight the note name background with white color
+					for _, obj := range notesNameContainer.Objects {
+						localContainer, ok := obj.(*fyne.Container)
+						if ok && localContainer.Objects[1].(*widget.Button).Text == currentNote {
+							// TODO: Highlight the note name background with white color
+							// TODO: Remove the highlight from the previous note name
+						}
+					}
 				},
 			}
-			notesNameContainer.Add(noteNameButton)
+			// Highlight newly created note name
+			bg := canvas.NewRectangle(color.White)
+			highLightedNoteName := container.NewStack(bg, noteNameButton)
+			// TODO: Remove the highlight from the previous note name
+			// Add the note name to the container
+			notesNameContainer.Add(highLightedNoteName)
 			// Change current note state
 			currentNote = noteName
 			fmt.Println("Add Note")
 
 		}), widget.NewButtonWithIcon("", theme.ContentRemoveIcon(), func() {
 			// Remove the current note
+			// TODO: Highlight the note name background with white color
 			if len(notesNameContainer.Objects) > 0 {
 				// Find the index of the current note
 				indexToRemove := 0
