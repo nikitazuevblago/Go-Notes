@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/gob"
+	"fmt"
 	"image/color"
 	"os"
 	"strings"
@@ -22,16 +23,36 @@ func addNote(entry *widget.Entry, notesNameContainer *fyne.Container, noteName s
 		}
 	}
 	// Save the previous note text
-	notesDB[previousButtonText] = entry.Text
+	isFound := false
+	for i, note := range notesDB {
+		if note.Name == previousButtonText {
+			note.Text = entry.Text
+			notesDB[i] = note
+			isFound = true
+		}
+	}
+	var maxKey int
+	if len(notesDB) > 0 {
+		keys := make([]int, 0, len(notesDB))
+		for key := range notesDB {
+			keys = append(keys, key)
+		}
+		maxKey = keys[len(keys)-1]
+	} else {
+		maxKey = -1
+	}
+	if !isFound {
+		if previousButtonText != "" && entry.Text != defaultNote {
+			notesDB[maxKey+1] = Note{Name: previousButtonText, Text: entry.Text}
+		}
+	}
 	// Clear the entry
-	//entry.SetText("")
 	entry.SetText(noteText)
 	if currentHighlightedNoteName != nil {
 		currentHighlightedNoteName.Objects[1].(*widget.Button).SetText(previousButtonText)
 		currentHighlightedNoteName.Objects[0].(*canvas.Rectangle).FillColor = color.Transparent
 	}
 	// Add new note
-	// noteName := "Untitled"
 	noteNameButton := &widget.Button{
 		Text:      noteName,
 		Alignment: widget.ButtonAlignLeading,
@@ -44,11 +65,41 @@ func addNote(entry *widget.Entry, notesNameContainer *fyne.Container, noteName s
 				previousButtonText = "Untitled"
 			}
 		}
+		fmt.Println(previousButtonText, "PREVIOUS BUTTON TEXT")
 		// Save the previous note text
-		notesDB[previousButtonText] = entry.Text
+		isFound := false
+		for i, note := range notesDB {
+			if note.Name == previousButtonText {
+				note.Text = entry.Text
+				notesDB[i] = note
+				isFound = true
+			}
+		}
+		var maxKey int
+		if len(notesDB) > 0 {
+			keys := make([]int, 0, len(notesDB))
+			for key := range notesDB {
+				keys = append(keys, key)
+			}
+			maxKey = keys[len(keys)-1]
+		} else {
+			maxKey = -1
+		}
+		if !isFound {
+			if previousButtonText != "" && entry.Text != defaultNote {
+				notesDB[maxKey+1] = Note{Name: previousButtonText, Text: entry.Text}
+			}
+		}
 
 		// Open the note
-		entry.SetText(notesDB[noteNameButton.Text])
+		fmt.Println(notesDB, "OPENING NOTE")
+		fmt.Println(noteNameButton.Text, "OPENING NOTE")
+		for i, note := range notesDB {
+			if note.Name == noteNameButton.Text {
+				entry.SetText(note.Text)
+				notesDB[i] = note
+			}
+		}
 		// Update the previous button's appearance
 		if currentHighlightedNoteName != nil {
 			currentHighlightedNoteName.Objects[1].(*widget.Button).SetText(previousButtonText)
@@ -104,13 +155,18 @@ func removeNote(entry *widget.Entry, notesNameContainer *fyne.Container) {
 			}
 		}
 		// Clear the entry if there are no notes
-		if len(notesNameContainer.Objects) == 1 {
+		if len(notesNameContainer.Objects) == 1 { // If there is only one note, then the entry will be cleared and default text will be set
 			entry.SetText(defaultNote)
 		} else if len(notesNameContainer.Objects) > 1 {
 			// Change current note
 			if len(notesNameContainer.Objects) > indexToRemove+1 { // Check if there is a next note
 				currentNoteName = notesNameContainer.Objects[indexToRemove+1].(*fyne.Container).Objects[1].(*widget.Button).Text
-				entry.SetText(notesDB[currentNoteName])
+				for i, note := range notesDB {
+					if note.Name == currentNoteName {
+						entry.SetText(note.Text)
+						notesDB[i] = note
+					}
+				}
 				// Highlight the note name background with white color
 				bg := canvas.NewRectangle(color.White)
 				highLightedNoteName := container.NewStack(bg, notesNameContainer.Objects[indexToRemove+1].(*fyne.Container).Objects[1].(*widget.Button))
@@ -119,7 +175,12 @@ func removeNote(entry *widget.Entry, notesNameContainer *fyne.Container) {
 
 			} else {
 				currentNoteName = notesNameContainer.Objects[indexToRemove-1].(*fyne.Container).Objects[1].(*widget.Button).Text
-				entry.SetText(notesDB[currentNoteName])
+				for i, note := range notesDB {
+					if note.Name == currentNoteName {
+						entry.SetText(note.Text)
+						notesDB[i] = note
+					}
+				}
 				// Highlight the note name background with white color
 				bg := canvas.NewRectangle(color.White)
 				highLightedNoteName := container.NewStack(bg, notesNameContainer.Objects[indexToRemove-1].(*fyne.Container).Objects[1].(*widget.Button))
@@ -131,12 +192,23 @@ func removeNote(entry *widget.Entry, notesNameContainer *fyne.Container) {
 		notesNameContainer.Objects = append(notesNameContainer.Objects[:indexToRemove],
 			notesNameContainer.Objects[indexToRemove+1:]...)
 		// Remove the note from the DB
-		delete(notesDB, currentNoteName)
+		fmt.Println(notesDB, "REMOVING NOTE")
+		fmt.Println(currentNoteName, "REMOVING NOTE")
+		for i, note := range notesDB {
+			if note.Name == currentNoteName {
+				delete(notesDB, i)
+			}
+		}
 	}
 }
 
 // Function to save the DB
-func saveDB(filename string, data map[string]string) error {
+func saveDB(filename string, data map[int]Note) error {
+	for i, note := range data {
+		if note.Text == defaultNote || note.Name == "Untitled" {
+			delete(data, i)
+		}
+	}
 	file, err := os.Create(filename)
 	if err != nil {
 		return err
@@ -153,14 +225,14 @@ func saveDB(filename string, data map[string]string) error {
 }
 
 // Function to load the DB
-func loadDB(filename string) (map[string]string, error) {
+func loadDB(filename string) (map[int]Note, error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		return nil, err
 	}
 	defer file.Close()
 
-	var data map[string]string
+	var data map[int]Note
 	decoder := gob.NewDecoder(file)
 	err = decoder.Decode(&data)
 	if err != nil {
