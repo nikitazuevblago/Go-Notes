@@ -2,7 +2,6 @@ package main
 
 // TODO:
 // - Make the notes preserve an order (map doesn't preserve order)
-// - Fix the bug where there is a problem with notes with same names
 // - Remove notes.db from commit history
 // - Make code more readable
 // - Add an icon for app
@@ -150,6 +149,6 @@ func main() {
 			notesDB[len(notesDB)] = Note{Name: currentNoteName, Text: entry.Text}
 		}
 	}
-	//fmt.Println(notesDB, "SAVING DB")
-	//saveDB("notes.db", notesDB)
+	fmt.Println(notesDB, "SAVING DB")
+	saveDB("notes.db", notesDB)
 }

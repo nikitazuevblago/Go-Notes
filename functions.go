@@ -23,12 +23,12 @@ func addNote(entry *widget.Entry, notesNameContainer *fyne.Container, noteName s
 		}
 	}
 	// Save the previous note text
-	isFound := false
+	//isFound := false
 	for i, note := range notesDB {
 		if note.Name == previousButtonText {
 			note.Text = entry.Text
 			notesDB[i] = note
-			isFound = true
+			//isFound = true
 		}
 	}
 	var maxKey int
@@ -41,10 +41,10 @@ func addNote(entry *widget.Entry, notesNameContainer *fyne.Container, noteName s
 	} else {
 		maxKey = -1
 	}
-	if !isFound {
-		if previousButtonText != "" && entry.Text != defaultNote {
-			notesDB[maxKey+1] = Note{Name: previousButtonText, Text: entry.Text}
-		}
+	if previousButtonText != "" && entry.Text != defaultNote {
+		//if !isFound {
+		notesDB[maxKey+1] = Note{Name: previousButtonText, Text: entry.Text}
+		//}
 	}
 	// Clear the entry
 	entry.SetText(noteText)
@@ -58,64 +58,66 @@ func addNote(entry *widget.Entry, notesNameContainer *fyne.Container, noteName s
 		Alignment: widget.ButtonAlignLeading,
 	}
 	noteNameButton.OnTapped = func() {
-		var previousButtonText string
-		if currentHighlightedNoteName != nil {
-			previousButtonText = currentHighlightedNoteName.Objects[1].(*widget.Button).Text
-			if previousButtonText == "" {
-				previousButtonText = "Untitled"
+		if currentHighlightedNoteName.Objects[1].(*widget.Button) != noteNameButton {
+			var previousButtonText string
+			if currentHighlightedNoteName != nil {
+				previousButtonText = currentHighlightedNoteName.Objects[1].(*widget.Button).Text
+				if previousButtonText == "" {
+					previousButtonText = "Untitled"
+				}
 			}
-		}
-		fmt.Println(previousButtonText, "PREVIOUS BUTTON TEXT")
-		// Save the previous note text
-		isFound := false
-		for i, note := range notesDB {
-			if note.Name == previousButtonText {
-				note.Text = entry.Text
-				notesDB[i] = note
-				isFound = true
+			fmt.Println(previousButtonText, "PREVIOUS BUTTON TEXT")
+			// Save the previous note text
+			isFound := false
+			for i, note := range notesDB {
+				if note.Name == previousButtonText && note.Text == entry.Text {
+					note.Text = entry.Text
+					notesDB[i] = note
+					isFound = true
+				}
 			}
-		}
-		var maxKey int
-		if len(notesDB) > 0 {
-			keys := make([]int, 0, len(notesDB))
-			for key := range notesDB {
-				keys = append(keys, key)
-			}
-			maxKey = keys[len(keys)-1]
-		} else {
-			maxKey = -1
-		}
-		if !isFound {
-			if previousButtonText != "" && entry.Text != defaultNote {
-				notesDB[maxKey+1] = Note{Name: previousButtonText, Text: entry.Text}
-			}
-		}
-
-		// Open the note
-		fmt.Println(notesDB, "OPENING NOTE")
-		fmt.Println(noteNameButton.Text, "OPENING NOTE")
-		for i, note := range notesDB {
-			if note.Name == noteNameButton.Text {
-				entry.SetText(note.Text)
-				notesDB[i] = note
-			}
-		}
-		// Update the previous button's appearance
-		if currentHighlightedNoteName != nil {
-			currentHighlightedNoteName.Objects[1].(*widget.Button).SetText(previousButtonText)
-			currentHighlightedNoteName.Objects[0].(*canvas.Rectangle).FillColor = color.Transparent
-			currentHighlightedNoteName.Refresh()
-		}
-		// Change current note state
-		currentNoteName = noteName
-		// Highlight the note name background with white color
-		for _, obj := range notesNameContainer.Objects {
-			button := obj.(*fyne.Container).Objects[1].(*widget.Button)
-			if button == noteNameButton {
-				obj.(*fyne.Container).Objects[0].(*canvas.Rectangle).FillColor = color.White
-				currentHighlightedNoteName = obj.(*fyne.Container)
+			var maxKey int
+			if len(notesDB) > 0 {
+				keys := make([]int, 0, len(notesDB))
+				for key := range notesDB {
+					keys = append(keys, key)
+				}
+				maxKey = keys[len(keys)-1]
 			} else {
-				obj.(*fyne.Container).Objects[0].(*canvas.Rectangle).FillColor = color.Transparent
+				maxKey = -1
+			}
+			if previousButtonText != "" && entry.Text != defaultNote {
+				if !isFound {
+					notesDB[maxKey+1] = Note{Name: previousButtonText, Text: entry.Text}
+				}
+			}
+
+			// Open the note
+			fmt.Println(notesDB, "OPENING NOTE")
+			fmt.Println(noteNameButton.Text, "OPENING NOTE")
+			for i, note := range notesDB {
+				if note.Name == noteNameButton.Text {
+					entry.SetText(note.Text)
+					notesDB[i] = note
+				}
+			}
+			// Update the previous button's appearance
+			if currentHighlightedNoteName != nil {
+				currentHighlightedNoteName.Objects[1].(*widget.Button).SetText(previousButtonText)
+				currentHighlightedNoteName.Objects[0].(*canvas.Rectangle).FillColor = color.Transparent
+				currentHighlightedNoteName.Refresh()
+			}
+			// Change current note state
+			currentNoteName = noteName
+			// Highlight the note name background with white color
+			for _, obj := range notesNameContainer.Objects {
+				button := obj.(*fyne.Container).Objects[1].(*widget.Button)
+				if button == noteNameButton {
+					obj.(*fyne.Container).Objects[0].(*canvas.Rectangle).FillColor = color.White
+					currentHighlightedNoteName = obj.(*fyne.Container)
+				} else {
+					obj.(*fyne.Container).Objects[0].(*canvas.Rectangle).FillColor = color.Transparent
+				}
 			}
 		}
 	}
