@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"image/color"
 
 	"fyne.io/fyne/v2"
@@ -54,6 +55,21 @@ func main() {
 	notesNameContainer := container.New(zeroPaddingLayout)
 	entry.SetText(defaultNote)
 
+	// Load the DB
+	var err error
+	notesDB, err = loadDB("notes.db")
+	if err != nil {
+		fmt.Println("Error loading DB:", err)
+		notesDB = make(map[string]string)
+	} else {
+		fmt.Println(notesDB)
+		for name, text := range notesDB {
+			if name != "" {
+				addNote(entry, notesNameContainer, name, text)
+			}
+		}
+	}
+
 	// wrap notesNameContainer in a scroll container
 	scrollNotesNameContainer := container.NewVScroll(notesNameContainer)
 	scrollNotesNameContainer.SetMinSize(fyne.NewSize(100, 300))
@@ -63,13 +79,13 @@ func main() {
 		KeyName:  fyne.KeyN,
 		Modifier: fyne.KeyModifierControl,
 	}, func(shortcut fyne.Shortcut) {
-		addNote(entry, notesNameContainer)
+		addNote(entry, notesNameContainer, "Untitled", "")
 	})
 
 	// Left side of split container
 	leftSide := container.NewVBox(
 		container.NewHBox(widget.NewButtonWithIcon("", theme.ContentAddIcon(), func() {
-			addNote(entry, notesNameContainer)
+			addNote(entry, notesNameContainer, "Untitled", "")
 		}), widget.NewButtonWithIcon("", theme.ContentRemoveIcon(), func() {
 			removeNote(entry, notesNameContainer)
 		})),
@@ -90,4 +106,17 @@ func main() {
 	content := container.NewStack(generalBackgroundRect, split)
 	window.SetContent(content)
 	window.ShowAndRun()
+	fmt.Println(notesDB)
+	// Save last note if it is not in DB
+	isFound := false
+	currentNoteName := currentHighlightedNoteName.Objects[1].(*widget.Button).Text
+	for name, text := range notesDB {
+		if text == entry.Text && name == currentNoteName {
+			isFound = true
+		}
+	}
+	if !isFound {
+		notesDB[currentNoteName] = entry.Text
+	}
+	saveDB("notes.db", notesDB)
 }

@@ -1,7 +1,9 @@
 package main
 
 import (
+	"encoding/gob"
 	"image/color"
+	"os"
 	"strings"
 
 	"fyne.io/fyne/v2"
@@ -11,7 +13,7 @@ import (
 )
 
 // Sub functions
-func addNote(entry *widget.Entry, notesNameContainer *fyne.Container) {
+func addNote(entry *widget.Entry, notesNameContainer *fyne.Container, noteName string, noteText string) {
 	var previousButtonText string
 	if currentHighlightedNoteName != nil {
 		previousButtonText = currentHighlightedNoteName.Objects[1].(*widget.Button).Text
@@ -22,13 +24,14 @@ func addNote(entry *widget.Entry, notesNameContainer *fyne.Container) {
 	// Save the previous note text
 	notesDB[previousButtonText] = entry.Text
 	// Clear the entry
-	entry.SetText("")
+	//entry.SetText("")
+	entry.SetText(noteText)
 	if currentHighlightedNoteName != nil {
 		currentHighlightedNoteName.Objects[1].(*widget.Button).SetText(previousButtonText)
 		currentHighlightedNoteName.Objects[0].(*canvas.Rectangle).FillColor = color.Transparent
 	}
 	// Add new note
-	noteName := "Untitled"
+	// noteName := "Untitled"
 	noteNameButton := &widget.Button{
 		Text:      noteName,
 		Alignment: widget.ButtonAlignLeading,
@@ -130,4 +133,39 @@ func removeNote(entry *widget.Entry, notesNameContainer *fyne.Container) {
 		// Remove the note from the DB
 		delete(notesDB, currentNoteName)
 	}
+}
+
+// Function to save the DB
+func saveDB(filename string, data map[string]string) error {
+	file, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	encoder := gob.NewEncoder(file)
+	err = encoder.Encode(data)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Function to load the DB
+func loadDB(filename string) (map[string]string, error) {
+	file, err := os.Open(filename)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	var data map[string]string
+	decoder := gob.NewDecoder(file)
+	err = decoder.Decode(&data)
+	if err != nil {
+		return nil, err
+	}
+
+	return data, nil
 }
