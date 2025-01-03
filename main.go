@@ -1,8 +1,6 @@
 package main
 
 // TODO:
-// - Make the notes preserve an order (map doesn't preserve order)
-// - Remove notes.db from commit history
 // - Make code more readable
 // - Add an icon for app
 // - Make app load without console
@@ -13,6 +11,7 @@ package main
 import (
 	"fmt"
 	"image/color"
+	"os"
 	"sort"
 
 	"fyne.io/fyne/v2"
@@ -52,8 +51,17 @@ var (
 func main() {
 	// Set window
 	app := app.New()
+	// Set icon
+	iconData, iconErr := os.ReadFile("icon.png")
+	if iconErr != nil {
+		fmt.Println("Error reading icon file:", iconErr)
+	}
+	appIcon := fyne.NewStaticResource("AppIcon", iconData)
+	app.SetIcon(appIcon)
+	// Set theme
 	app.Settings().SetTheme(&customTheme{})
-	window := app.NewWindow("Fyne Notes")
+	// Set window
+	window := app.NewWindow("Go Notes")
 	window.Resize(fyne.NewSize(500, 320))
 	window.SetPadded(false) // Removes padding
 	window.CenterOnScreen() // Ensures it is properly centered
