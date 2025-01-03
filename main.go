@@ -1,13 +1,5 @@
 package main
 
-// TODO:
-// - Make code more readable
-// - Add an icon for app
-// - Make app load without console
-// - Compile for many platforms
-// - Release executables for many platforms in release v1.0.0 - Github
-// - Make README.md
-
 import (
 	"fmt"
 	"image/color"
@@ -18,39 +10,46 @@ import (
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/driver/desktop"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 )
+
+// TODO:
+// - Make code more readable, maybe add "subfunctions" in functions.go
+// - Make app load without console
+// - Compile for many platforms
+// - Release executables for many platforms in release v1.0.0 - Github
 
 // Set default note
 const (
 	defaultNote = "Welcome!\nTap '+' in the toolbar to add a note.\nOr use the keyboard shortcut ctrl+N."
 )
 
+// Type of database element
 type Note struct {
-	Name string
-	Text string
+	noteNameContainer *fyne.Container
+	Name              string
+	Text              string
 }
 
 var (
 	// Set colors
-	fontColor     = color.NRGBA{R: 70, G: 58, B: 17, A: 255}
-	leftSideColor = color.NRGBA{R: 242, G: 235, B: 155, A: 255}
-	notesColor    = color.NRGBA{R: 216, G: 210, B: 140, A: 255}
+	fontColor  = color.NRGBA{R: 70, G: 58, B: 17, A: 255}
+	mainColor  = color.NRGBA{R: 242, G: 235, B: 155, A: 255}
+	entryColor = color.NRGBA{R: 216, G: 210, B: 140, A: 255} // Color of the note entry (text area)
 
-	// Set temporary DB for notes
-	notesDB                    = make(map[int]Note)
-	currentNoteName            string
-	currentHighlightedNoteName *fyne.Container
+	// Set local DB for notes
+	notesDB = make(map[int]Note)
+
+	// Set current note container
+	currentNoteNameContainer *fyne.Container
 )
 
-// Main
-
 func main() {
-	// Set window
+	// Create new app
 	app := app.New()
+
 	// Set icon
 	iconData, iconErr := os.ReadFile("icon.png")
 	if iconErr != nil {
@@ -58,8 +57,10 @@ func main() {
 	}
 	appIcon := fyne.NewStaticResource("AppIcon", iconData)
 	app.SetIcon(appIcon)
+
 	// Set theme
 	app.Settings().SetTheme(&customTheme{})
+
 	// Set window
 	window := app.NewWindow("Go Notes")
 	window.Resize(fyne.NewSize(500, 320))
@@ -67,60 +68,20 @@ func main() {
 	window.CenterOnScreen() // Ensures it is properly centered
 
 	// General background container
-	generalBackgroundRect := canvas.NewRectangle(notesColor)
+	generalBackgroundRect := canvas.NewRectangle(mainColor) // WARNING: MAYBE NO NEED FOR THIS
 	generalBackgroundRect.Resize(window.Canvas().Size())
 
+	// Splitting general background container into two parts, note names on the left and note text on the right
 	// Right side of split container
-	entry := widget.NewMultiLineEntry()
-	rightSideWithBackground := container.NewStack(canvas.NewRectangle(notesColor), entry)
-
-	// dynamic container for notes names
-	zeroPaddingLayout := layout.NewCustomPaddedVBoxLayout(0) // Make zero padding between note names
-	notesNameContainer := container.New(zeroPaddingLayout)
+	entry := widget.NewMultiLineEntry() // Text area for note text
 	entry.SetText(defaultNote)
 
-	// // Load the DB
-	var err error
-	notesDB, err = loadDB("notes.db")
-	if err != nil {
-		fmt.Println("Error loading DB:", err)
-		notesDB = make(map[int]Note)
-	} else {
-		if len(notesDB) > 0 {
-			fmt.Println(notesDB, "LOADING DB")
-			// Extract and sort the keys
-			keys := make([]int, 0, len(notesDB))
-			for key := range notesDB {
-				keys = append(keys, key)
-			}
-			sort.Ints(keys)
-			// Create a slice in sorted order
-			orderedNotesDB := make([]Note, 0, len(notesDB))
-			for _, key := range keys {
-				orderedNotesDB = append(orderedNotesDB, notesDB[key])
-			}
-			for _, note := range orderedNotesDB {
-				addNote(entry, notesNameContainer, note.Name, note.Text)
-			}
-		}
-	}
-
-	// wrap notesNameContainer in a scroll container
-	scrollNotesNameContainer := container.NewVScroll(notesNameContainer)
-	scrollNotesNameContainer.SetMinSize(fyne.NewSize(100, 300))
-
-	// Add shortcut to add a note
-	window.Canvas().AddShortcut(
-		&desktop.CustomShortcut{
-			KeyName:  fyne.KeyN,
-			Modifier: fyne.KeyModifierControl,
-		},
-		func(shortcut fyne.Shortcut) {
-			addNote(entry, notesNameContainer, "Untitled", "")
-		},
-	)
-
 	// Left side of split container
+	rightSideWithBackground := container.NewStack(canvas.NewRectangle(entryColor), entry) // Background and text area
+	zeroPaddingLayout := layout.NewCustomPaddedVBoxLayout(0)                              // Make zero padding between note names
+	notesNameContainer := container.New(zeroPaddingLayout)                                // Container for note names
+	scrollNotesNameContainer := container.NewVScroll(notesNameContainer)                  // wrap notesNameContainer in a scroll container
+	scrollNotesNameContainer.SetMinSize(fyne.NewSize(100, 300))
 	leftSide := container.NewVBox(
 		container.NewHBox(widget.NewButtonWithIcon("", theme.ContentAddIcon(), func() {
 			addNote(entry, notesNameContainer, "Untitled", "")
@@ -129,34 +90,50 @@ func main() {
 		})),
 		scrollNotesNameContainer,
 	)
-	leftSideRect := canvas.NewRectangle(leftSideColor)
+	leftSideRect := canvas.NewRectangle(mainColor)
 	leftSideWithBackground := container.NewStack(leftSideRect, leftSide)
 
-	// Split container
+	// Combine left and right sides in a horizontal split container
 	split := container.NewHSplit(
 		leftSideWithBackground,
 		rightSideWithBackground,
 	)
-	// Adjust the slider to be more to the left
+	// Adjust the slider of the split container to be more to the left
 	split.SetOffset(0.3)
 
-	// Stack container
-	content := container.NewStack(generalBackgroundRect, split)
+	// Making background for the whole GUI
+	content := container.NewStack(generalBackgroundRect, split) // WARNING: MAYBE NO NEED FOR THIS
+
+	// Load notes from DB, add to notesNameContainer in order
+	var err error
+	var loadedNotesDB map[int]Note
+	loadedNotesDB, err = loadNotesFromDB("notes.db")
+	if err != nil {
+		fmt.Println("Error loading notes from DB:", err)
+		loadedNotesDB = make(map[int]Note)
+	}
+	// Sort notesDB keys
+	keys := make([]int, 0, len(loadedNotesDB))
+	for key := range loadedNotesDB {
+		keys = append(keys, key)
+	}
+	sort.Ints(keys)
+	// Add notes to notesNameContainer in order
+	for _, key := range keys {
+		fmt.Println("----")
+		fmt.Println(loadedNotesDB)
+		fmt.Println(key)
+		fmt.Println("----")
+		addNote(entry, notesNameContainer, loadedNotesDB[key].Name, loadedNotesDB[key].Text)
+	}
+
+	// Set window content
 	window.SetContent(content)
 	window.ShowAndRun()
-	// Save last note if it is not in DB
-	isFound := false
-	currentNoteName := currentHighlightedNoteName.Objects[1].(*widget.Button).Text
-	for _, note := range notesDB {
-		if note.Name == currentNoteName {
-			isFound = true
-		}
-	}
-	if !isFound {
-		if entry.Text != defaultNote {
-			notesDB[len(notesDB)] = Note{Name: currentNoteName, Text: entry.Text}
-		}
-	}
-	fmt.Println(notesDB, "SAVING DB")
-	saveDB("notes.db", notesDB)
+
+	// TODO: Saving the current note if not in DB
+	saveNotesToDB("notes.db", entry, notesNameContainer)
+	fmt.Println(notesDB, "AFTER SAVING")
+	// map[0:{0xc001350050 Untitled }] - notesDB object AFTER SAVING function
+	// map[0:{<nil> Untitled }] - notesDB object AFTER LOADING function
 }
