@@ -1,9 +1,7 @@
 package main
 
 import (
-	"fmt"
 	"image/color"
-	"os"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/theme"
@@ -34,11 +32,7 @@ func (c customTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) 
 }
 
 func (c customTheme) Font(style fyne.TextStyle) fyne.Resource {
-	fontData, err := os.ReadFile("GochiHand.ttf")
-	if err != nil {
-		fmt.Println(err)
-	}
-	return fyne.NewStaticResource("GochiHand.ttf", fontData)
+	return resourceGochiHandTtf
 }
 
 func (c customTheme) Icon(name fyne.ThemeIconName) fyne.Resource {

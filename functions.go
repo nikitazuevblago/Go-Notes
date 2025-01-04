@@ -4,6 +4,7 @@ import (
 	"encoding/gob"
 	"fmt"
 	"image/color"
+	"log"
 	"sort"
 	"strings"
 
@@ -214,9 +215,86 @@ func removeNote(entry *widget.Entry, notesNameContainer *fyne.Container) {
 	}
 }
 
+// // Function to save the DB
+// func saveNotesToDB(filename string, entry *widget.Entry, notesNameContainer *fyne.Container) error {
+// Check if current note is in DB, add if not
+// if len(notesDB) < len(notesNameContainer.Objects) {
+// 	currentNoteName := currentNoteNameContainer.Objects[1].(*widget.Button).Text
+// 	notesDB[len(notesDB)] = Note{noteNameContainer: currentNoteNameContainer, Name: currentNoteName, Text: entry.Text}
+// }
+// // Remove Untitled notes from DB
+// for i, note := range notesDB {
+// 	if note.Name == "Untitled" {
+// 		delete(notesDB, i)
+// 	}
+// }
+// // Sort keys of notesDB map for easier reordering
+// keys := make([]int, 0, len(notesDB))
+// for key := range notesDB {
+// 	keys = append(keys, key)
+// }
+// sort.Ints(keys)
+// // Reorder the notesDB so indices don't have gaps
+// intendedIndex := 0
+// for _, key := range keys {
+// 	if key != intendedIndex {
+// 		notesDB[intendedIndex] = notesDB[key]
+// 		delete(notesDB, key)
+// 	}
+// 	intendedIndex++
+// }
+
+// 	// Open a writer using storage.Writer
+// 	writer, err := storage.Writer(storage.NewFileURI(filename))
+// 	if err != nil {
+// 		return err
+// 	}
+// 	defer writer.Close()
+
+// 	// Encode the notesDB map into the file
+// 	encoder := gob.NewEncoder(writer)
+// 	err = encoder.Encode(notesDB)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	return nil
+// }
+
+// // Function to load the DB
+// func loadNotesFromDB(filename string) (map[int]Note, error) {
+// 	// Create a URI for the file
+// 	fileURI := storage.NewFileURI(filename)
+
+// 	// Check if the file exists
+// 	exists, err := storage.Exists(fileURI)
+// 	if err != nil {
+// 		return nil, log.Printf("failed to check if file exists: %v", err)
+// 	}
+
+// 	if !exists {
+// 		fmt.Println("Database file does not exist. Initializing new notes DB.")
+// 		return make(map[int]Note), nil
+// 	}
+
+// 	// Open a reader using storage.Reader
+// 	reader, err := storage.Reader(fileURI)
+// 	if err != nil {
+// 		return nil, log.Printf("failed to open file for reading: %v", err)
+// 	}
+// 	defer reader.Close()
+
+// 	var data map[int]Note
+// 	decoder := gob.NewDecoder(reader)
+// 	err = decoder.Decode(&data)
+// 	if err != nil {
+// 		return nil, log.Printf("failed to decode data: %v", err)
+// 	}
+
+// 	return data, nil
+// }
+
 // Function to save the DB
 func saveNotesToDB(filename string, entry *widget.Entry, notesNameContainer *fyne.Container) error {
-	// Check if current note is in DB, add if not
 	if len(notesDB) < len(notesNameContainer.Objects) {
 		currentNoteName := currentNoteNameContainer.Objects[1].(*widget.Button).Text
 		notesDB[len(notesDB)] = Note{noteNameContainer: currentNoteNameContainer, Name: currentNoteName, Text: entry.Text}
@@ -243,50 +321,70 @@ func saveNotesToDB(filename string, entry *widget.Entry, notesNameContainer *fyn
 		intendedIndex++
 	}
 
-	// Open a writer using storage.Writer
-	writer, err := storage.Writer(storage.NewFileURI(filename))
+	// Get the root URI for app-specific storage
+	storageRoot := fyne.CurrentApp().Storage().RootURI()
+
+	// Create a URI for the file within the app's storage
+	fileURI, err := storage.Child(storageRoot, filename)
 	if err != nil {
+		log.Printf("failed to create file URI: %v", err)
+		return err
+	}
+
+	// Open a writer for the file
+	writer, err := storage.Writer(fileURI)
+	if err != nil {
+		log.Printf("failed to create writer: %v", err)
 		return err
 	}
 	defer writer.Close()
 
 	// Encode the notesDB map into the file
 	encoder := gob.NewEncoder(writer)
-	err = encoder.Encode(notesDB)
-	if err != nil {
+	if err := encoder.Encode(notesDB); err != nil {
+		log.Printf("failed to encode data: %v", err)
 		return err
 	}
+
 	return nil
 }
 
-// Function to load the DB
 func loadNotesFromDB(filename string) (map[int]Note, error) {
-	// Create a URI for the file
-	fileURI := storage.NewFileURI(filename)
+	// Get the app-specific storage root URI
+	storageRoot := fyne.CurrentApp().Storage().RootURI()
+
+	// Create a child URI for the specified filename
+	fileURI, err := storage.Child(storageRoot, filename)
+	if err != nil {
+		log.Printf("failed to create file URI: %v", err)
+		return nil, err
+	}
 
 	// Check if the file exists
 	exists, err := storage.Exists(fileURI)
 	if err != nil {
-		return nil, fmt.Errorf("failed to check if file exists: %w", err)
+		log.Printf("failed to check file existence: %v", err)
+		return nil, err
 	}
-
 	if !exists {
 		fmt.Println("Database file does not exist. Initializing new notes DB.")
 		return make(map[int]Note), nil
 	}
 
-	// Open a reader using storage.Reader
+	// Open the file for reading
 	reader, err := storage.Reader(fileURI)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open file for reading: %w", err)
+		log.Printf("failed to open database file: %v", err)
+		return nil, err
 	}
 	defer reader.Close()
 
+	// Decode the data from the file
 	var data map[int]Note
 	decoder := gob.NewDecoder(reader)
-	err = decoder.Decode(&data)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode data: %w", err)
+	if err := decoder.Decode(&data); err != nil {
+		log.Printf("failed to decode data: %v", err)
+		return nil, err
 	}
 
 	return data, nil
