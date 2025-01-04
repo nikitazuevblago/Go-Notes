@@ -2,14 +2,15 @@ package main
 
 import (
 	"encoding/gob"
+	"fmt"
 	"image/color"
-	"os"
 	"sort"
 	"strings"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/storage"
 	"fyne.io/fyne/v2/widget"
 )
 
@@ -242,15 +243,15 @@ func saveNotesToDB(filename string, entry *widget.Entry, notesNameContainer *fyn
 		intendedIndex++
 	}
 
-	// Create a new file
-	file, err := os.Create(filename)
+	// Open a writer using storage.Writer
+	writer, err := storage.Writer(storage.NewFileURI(filename))
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer writer.Close()
 
 	// Encode the notesDB map into the file
-	encoder := gob.NewEncoder(file)
+	encoder := gob.NewEncoder(writer)
 	err = encoder.Encode(notesDB)
 	if err != nil {
 		return err
@@ -260,17 +261,32 @@ func saveNotesToDB(filename string, entry *widget.Entry, notesNameContainer *fyn
 
 // Function to load the DB
 func loadNotesFromDB(filename string) (map[int]Note, error) {
-	file, err := os.Open(filename)
+	// Create a URI for the file
+	fileURI := storage.NewFileURI(filename)
+
+	// Check if the file exists
+	exists, err := storage.Exists(fileURI)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to check if file exists: %w", err)
 	}
-	defer file.Close()
+
+	if !exists {
+		fmt.Println("Database file does not exist. Initializing new notes DB.")
+		return make(map[int]Note), nil
+	}
+
+	// Open a reader using storage.Reader
+	reader, err := storage.Reader(fileURI)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open file for reading: %w", err)
+	}
+	defer reader.Close()
 
 	var data map[int]Note
-	decoder := gob.NewDecoder(file)
+	decoder := gob.NewDecoder(reader)
 	err = decoder.Decode(&data)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to decode data: %w", err)
 	}
 
 	return data, nil
