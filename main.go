@@ -16,13 +16,11 @@ import (
 
 // TODO:
 // - Make code more readable, maybe add "subfunctions" in functions.go
-// - Make app load without console
-// - Compile for many platforms
-// - Release executables for many platforms in release v1.0.0 - Github
+// - Compile for many platforms (for now only Windows)
 
 // Set default note
 const (
-	defaultNote = "Welcome!\nTap '+' in the toolbar to add a note.\nOr use the keyboard shortcut ctrl+N."
+	defaultNote = "Welcome!\nTap '+' in the toolbar to add a note."
 )
 
 // Type of database element

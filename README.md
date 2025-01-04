@@ -8,7 +8,6 @@ A lightweight, cross-platform desktop note-taking application built with Go and 
 
 - 🚀 Simple and intuitive interface
 - 📋 Create and manage multiple notes
-- ⌨️ Keyboard shortcuts support (Ctrl+N to create new note)
 - 💾 Automatic saving of notes
 - 🎨 Pleasant, eye-friendly color scheme
 - 📱 Responsive design that adapts to window size
@@ -51,10 +50,6 @@ go run .
 3. Select notes from the left panel to view/edit them
 4. Use the '-' button to delete the selected note
 5. Your notes are automatically saved when you close the application
-
-## Keyboard Shortcuts ⌨️
-
-- `Ctrl+N`: Create a new note
 
 ## Acknowledgments 🙏
 
