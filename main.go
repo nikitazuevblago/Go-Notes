@@ -14,10 +14,6 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
-// TODO:
-// - Make code more readable, maybe add "subfunctions" in functions.go
-// - Compile for many platforms (for now only Windows)
-
 // Set default note
 const (
 	defaultNote = "Welcome!\nTap '+' in the toolbar to add a note."
